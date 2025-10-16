@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>各醫學專科錄取率比較</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 使用 Inter 字體以獲得更好的排版效果 */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+        }
+        /* 確保 Canvas 在不同尺寸下都能良好顯示 */
+        #chartCanvas {
+            max-width: 100%;
+            height: auto;
+            border-radius: 0.75rem;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8 flex justify-center items-center min-h-screen">
+
+    <div class="w-full max-w-4xl bg-white shadow-xl rounded-xl p-6 sm:p-8">
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-6 border-b pb-3">
+            各醫學專科錄取率比較
+        </h1>
+
+        <!-- 圖表容器 -->
+        <div class="overflow-x-auto">
+            <canvas id="chartCanvas" width="850" height="900" class="bg-gray-50 border border-gray-200"></canvas>
+        </div>
+
+    </div>
+
+    <script>
+        // 確保 Canvas 能夠自適應寬度
+        function resizeCanvas() {
+            const container = document.getElementById('chartCanvas').parentElement;
+            const canvas = document.getElementById('chartCanvas');
+            // 設定一個基準寬度，例如 850px (稍微增加以容納更長的標籤)，然後根據容器寬度調整
+            const baseWidth = 850;
+            const baseHeight = 900;
+            const containerWidth = container.clientWidth;
+
+            // 保持比例
+            const newWidth = Math.min(baseWidth, containerWidth);
+            const newHeight = (newWidth / baseWidth) * baseHeight;
+
+            canvas.style.width = newWidth + 'px';
+            canvas.style.height = newHeight + 'px';
+            
+            drawChart(); // 重新繪製圖表
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        window.onload = function() {
+            resizeCanvas();
+        };
+
+
+        // 提取自圖片的數據，新增了 ratio 欄位
+        const specialtyData = [
+            { name: "眼科", ratio: "3/25", rate: 0.120 },
+            { name: "精神科", ratio: "4/28", rate: 0.143 },
+            { name: "復健科", ratio: "4/19", rate: 0.211 },
+            { name: "泌尿科", ratio: "3/13", rate: 0.231 },
+            { name: "皮膚科", ratio: "3/12", rate: 0.250 },
+            { name: "家庭醫學科", ratio: "10/40", rate: 0.250 },
+            { name: "骨科", ratio: "4/12", rate: 0.333 },
+            { name: "腫瘤科", ratio: "1/3", rate: 0.333 },
+            { name: "耳鼻喉科", ratio: "4/11", rate: 0.364 },
+            { name: "病理科", ratio: "3/8", rate: 0.375 },
+            { name: "檢驗科", ratio: "1/2", rate: 0.500 },
+            { name: "核醫科", ratio: "1/2", rate: 0.500 },
+            { name: "麻醉科", ratio: "5/9", rate: 0.556 },
+            { name: "影像醫學科", ratio: "5/9", rate: 0.556 },
+            { name: "環境職業醫學科", ratio: "3/5", rate: 0.600 },
+            { name: "外科", ratio: "14/19", rate: 0.737 },
+            { name: "神經內科", ratio: "5/6", rate: 0.833 },
+            { name: "內科", ratio: "33/37", rate: 0.892 },
+            { name: "急診科", ratio: "6/6", rate: 1.000 },
+            { name: "婦產科", ratio: "6/4", rate: 1.500 },
+            { name: "小兒科", ratio: "11/7", rate: 1.571 },
+        ];
+        
+        // 繪製圖表的主函數
+        function drawChart() {
+            const canvas = document.getElementById('chartCanvas');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // 清空畫布
+            ctx.clearRect(0, 0, width, height);
+
+            // --- 圖表參數設定 ---
+            const padding = 40; // 上下邊距
+            const labelArea = 160; // 左側專科名稱標籤區域寬度
+            const dataArea = width - labelArea - padding; // 實際數據繪製區域寬度
+            const chartTop = padding;
+            const chartBottom = height - padding;
+            const chartLeft = labelArea;
+            const chartRight = width - padding;
+            const totalBars = specialtyData.length;
+            
+            // 垂直間隔 (每個專科的高度)
+            const barHeight = (chartBottom - chartTop) / totalBars;
+            const barGap = barHeight * 0.2; // 條之間的間隙
+            const barActualHeight = barHeight - barGap;
+
+            // 尋找最大錄取率以確定 X 軸範圍
+            const maxRate = Math.max(...specialtyData.map(d => d.rate));
+            const xAxisMax = Math.ceil(maxRate * 10) / 10; 
+            
+            // X 軸刻度數量 (例如 6 個刻度)
+            const numTicks = 6;
+            const tickInterval = xAxisMax / numTicks;
+
+            // 繪製 X 軸 (錄取率)
+            ctx.beginPath();
+            ctx.strokeStyle = '#333';
+            ctx.moveTo(chartLeft, chartBottom);
+            ctx.lineTo(chartRight, chartBottom);
+            ctx.stroke();
+            
+            // 繪製 X 軸刻度線和標籤
+            ctx.font = '14px Inter';
+            ctx.fillStyle = '#333';
+            ctx.textAlign = 'center';
+            for (let i = 0; i <= numTicks; i++) {
+                const rateValue = i * tickInterval;
+                const xPos = chartLeft + (rateValue / xAxisMax) * dataArea;
+                
+                // 刻度線
+                ctx.beginPath();
+                ctx.strokeStyle = '#ccc';
+                ctx.moveTo(xPos, chartBottom);
+                ctx.lineTo(xPos, chartBottom - 5);
+                ctx.stroke();
+
+                // 網格線 (虛線)
+                if (i > 0) {
+                    ctx.beginPath();
+                    ctx.setLineDash([2, 2]); // 設定虛線模式
+                    ctx.strokeStyle = '#e0e0e0';
+                    ctx.moveTo(xPos, chartBottom);
+                    ctx.lineTo(xPos, chartTop);
+                    ctx.stroke();
+                    ctx.setLineDash([]); // 重設為實線
+                }
+
+                // 刻度標籤
+                ctx.fillText(rateValue.toFixed(2), xPos, chartBottom + 20);
+            }
+            // X 軸標題
+            ctx.fillText('錄取率 (Admission Rate)', chartLeft + dataArea / 2, chartBottom + 40);
+
+            // 繪製長條圖
+            specialtyData.forEach((data, index) => {
+                const yPos = chartTop + index * barHeight;
+                const barWidth = (data.rate / xAxisMax) * dataArea;
+                const barCenterY = yPos + barHeight / 2 + 5;
+                
+                // 條的顏色 (用於突出大於 1.0 的值)
+                let barColor = '#3b82f6'; // 藍色 for <= 1.0
+                if (data.rate > 1.0) {
+                    barColor = '#ef4444'; // 紅色 for > 1.0
+                }
+
+                // 繪製長條
+                ctx.fillStyle = barColor;
+                ctx.fillRect(chartLeft, yPos + barGap / 2, barWidth, barActualHeight);
+
+                // 繪製左側 Y 軸標籤 (專科名稱)
+                ctx.fillStyle = '#333';
+                ctx.textAlign = 'right';
+                ctx.font = '14px Inter';
+                ctx.fillText(data.name, chartLeft - 5, barCenterY);
+                
+                // --- 1. 繪製內部標籤 (比例分數) ---
+                const ratioText = data.ratio;
+                const minBarWidthForInnerLabel = 60; // 最小寬度，用於顯示比例分數
+
+                if (barWidth >= minBarWidthForInnerLabel) {
+                    ctx.fillStyle = '#fff';
+                    ctx.textAlign = 'center';
+                    ctx.font = 'bold 13px Inter';
+                    // 將文字置中在長條內
+                    ctx.fillText(ratioText, chartLeft + barWidth / 2, barCenterY);
+                }
+
+                // --- 2. 繪製外部標籤 (錄取率百分比) ---
+                const ratePercentage = `${(data.rate * 100).toFixed(1)}%`;
+
+                ctx.fillStyle = '#1f2937';
+                ctx.textAlign = 'left';
+                ctx.font = '13px Inter'; 
+                
+                // 標籤永遠放在長條右側外 5px 處
+                const labelX = chartLeft + barWidth + 5;
+                
+                ctx.fillText(ratePercentage, labelX, barCenterY);
+            });
+        }
+    </script>
+</body>
+</html>
